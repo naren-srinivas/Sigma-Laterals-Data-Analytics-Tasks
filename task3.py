@@ -12,14 +12,12 @@ import plotly.graph_objects as go
 from io import BytesIO
 import time
 
-# Set page configuration and styling
 st.set_page_config(
     page_title="Customer Segmentation Analysis", 
     layout="wide",
     initial_sidebar_state="collapsed"
 )
 
-# Custom CSS for styling
 st.markdown("""
 <style>
     /* Main styling */
@@ -232,7 +230,7 @@ class CustomerSegmentation:
     
         return df, columns_normalize, X_scaled
         
-    def find_optimal_k(self): # elboqw method
+    def find_optimal_k(self): # elboqw method https://medium.com/@sachinsoni600517/the-art-and-science-of-k-means-clustering-a-practical-guide-e71b11638867 https://medium.com/thedeephub/implementing-k-means-clustering-from-scratch-ed60faace2e6
         wcss = []
         silhouette_scores = []
         K_range = range(2, 11)
@@ -302,37 +300,31 @@ class CustomerSegmentation:
             row = self.summary.loc[cluster]
             segment_recs = []
             
-            # High-value customers
             if row["TotalSpend"] > self.summary["TotalSpend"].mean() and row["Income"] > self.summary["Income"].mean():
                 segment_recs.append("Focus on loyalty programs and exclusive offerings")
                 segment_recs.append("Consider premium product lines or services")
                 
-            # Online shoppers
             if row["OnlinePurchaseRatio"] > 0.4:
                 segment_recs.append("Invest in personalized digital experiences")
                 segment_recs.append("Optimize mobile app and website user journeys")
             else:
                 segment_recs.append("Create incentives for online channel adoption")
-                
-            # Churn risk
+        
             if row["ChurnRisk"] > 0.5:
                 segment_recs.append("Develop targeted retention campaigns")
-                segment_recs.append("Implement proactive customer service outreach")
-                
-            # Families
+                segment_recs.append("Implement proactive customer service outreach")  
+            
             if row["Has_Kids"] > 0.5:
                 segment_recs.append("Create family-oriented promotions and bundles")
                 segment_recs.append("Consider timing campaigns around school holidays")
                 
-            # Campaign responsive
             if row["CampaignEngaged"] > self.summary["CampaignEngaged"].mean():
                 segment_recs.append("Increase campaign frequency to this segment")
                 segment_recs.append("Test different campaign types to optimize engagement")
             else:
                 segment_recs.append("Rethink campaign strategy for this segment")
                 segment_recs.append("Consider alternative communication channels")
-                
-            # Discount seekers
+            
             if row["DiscountAffinity"] > self.summary["DiscountAffinity"].mean():
                 segment_recs.append("Create strategic discount promotions")
                 segment_recs.append("Consider loyalty-based discount tiers")
@@ -341,7 +333,6 @@ class CustomerSegmentation:
             
         return recommendations
 
-# Helper function to create metrics
 def display_metric(title, value, delta=None):
     st.markdown(f"""
     <div class="metric-card">
@@ -350,7 +341,6 @@ def display_metric(title, value, delta=None):
     </div>
     """, unsafe_allow_html=True)
 
-# Helper function for creating section containers with styling
 def create_card(title, content_function):
     st.markdown(f"""
     <div class="dashboard-card">
@@ -359,38 +349,56 @@ def create_card(title, content_function):
     """, unsafe_allow_html=True)
     content_function()
 
-# Main app
 def main():
-    # App header
+
     st.markdown("""
     <div class="main-header">
         <h1>Customer Segmentation Analysis Dashboard</h1>
     </div>
     """, unsafe_allow_html=True)
     
-    # Initialize session state for file upload status
     if 'file_uploaded' not in st.session_state:
         st.session_state.file_uploaded = False
     
-    # Handle file upload
     if not st.session_state.file_uploaded:
-        uploaded_file = st.file_uploader("📤 Upload Customer Data (CSV)", type=["csv"], 
-                                       help="Upload a CSV file containing customer data")
+        col1, col2 = st.columns(2)
         
-        if uploaded_file is not None:
-            try:
-                with st.spinner("Processing data..."):
-                    df = pd.read_csv(uploaded_file)
-                    st.session_state.df = df
-                    st.session_state.file_uploaded = True
-                    st.rerun()
-            except Exception as e:
-                st.error(f"Error processing file: {e}")
-                st.info("Please make sure your CSV file has the required columns for customer segmentation")
-    
-    # If file is uploaded, show minimized uploader and main dashboard
+        with col1:
+            uploaded_file = st.file_uploader("📤 Upload Customer Data (CSV)", type=["csv"], 
+                                           help="Upload a CSV file containing customer data")
+            
+            if uploaded_file is not None:
+                try:
+                    with st.spinner("Processing data..."):
+                        df = pd.read_csv(uploaded_file)
+                        st.session_state.df = df
+                        st.session_state.file_uploaded = True
+                        st.rerun()
+                except Exception as e:
+                    st.error(f"Error processing file: {e}")
+                    st.info("Please make sure your CSV file has the required columns for customer segmentation")
+        
+        with col2:
+            st.write("Or use the default dataset:")
+            if st.button("📊 Load Default Dataset"):
+                try:
+                    with st.spinner("Loading default dataset..."):
+                        # Try to load from common locations
+                        try:
+                            df = pd.read_csv("Customer_Segmentation_Dataset.csv")
+                        except:
+                            # If file not found, display an error
+                            st.error("Default dataset file 'Customer_Segmentation_Dataset.csv' not found in current directory")
+                            st.info("Please make sure the file exists in the same directory as the application")
+                            st.stop()
+                        
+                        st.session_state.df = df
+                        st.session_state.file_uploaded = True
+                        st.rerun()
+                except Exception as e:
+                    st.error(f"Error loading default dataset: {e}")
+                    
     if st.session_state.file_uploaded:
-        # Show minimized file uploader with option to change file
         col1, col2 = st.columns([3, 1])
         with col1:
             st.markdown('<div class="minimized-uploader">📄 CSV file uploaded successfully</div>', unsafe_allow_html=True)
@@ -401,18 +409,14 @@ def main():
                     del st.session_state['df_clustered']
                 st.rerun()
         
-        # Display raw data sample in an expander
         with st.expander("🔍 Preview Raw Data", expanded=False):
             st.dataframe(st.session_state.df.head(), use_container_width=True)
             st.text(f"Dataset Shape: {st.session_state.df.shape}")
         
-        # Initialize segmentation
         segmentation = CustomerSegmentation(st.session_state.df)
         
-        # Dashboard tabs - using horizontal layout
         tabs = st.tabs(["📊 Cluster Analysis", "👥 Segment Profiles", "📈 Customer Distribution", "💼 Strategic Recommendations"])
         
-        # Tab 1: Cluster Analysis
         with tabs[0]:
             col1, col2 = st.columns([1, 1])
             
@@ -422,19 +426,16 @@ def main():
                     with st.spinner("Calculating optimal K..."):
                         k_range, wcss, silhouette_scores = segmentation.find_optimal_k()
                         
-                        # Store in session state
                         st.session_state['k_range'] = k_range
                         st.session_state['wcss'] = wcss
                         st.session_state['silhouette_scores'] = silhouette_scores
                         
-                        # Find best K based on silhouette score
                         best_k = k_range[silhouette_scores.index(max(silhouette_scores))]
                         st.session_state['best_k'] = best_k
             
             with col2:
                 st.markdown("### Run K-means Clustering")
                 
-                # Check if we have calculated optimal K
                 if 'best_k' in st.session_state:
                     default_k = st.session_state['best_k']
                 else:
@@ -444,7 +445,7 @@ def main():
                 
                 if st.button("Run Clustering", key="run_cluster"):
                     with st.spinner("Running K-means clustering..."):
-                        # Add a slight delay for better UX with the spinner
+    
                         time.sleep(0.5)
                         df_clustered, kmeans, silhouette = segmentation.run_kmeans(k_value)
                         st.session_state['df_clustered'] = df_clustered
@@ -453,13 +454,11 @@ def main():
                         st.session_state['segment_descriptions'] = segmentation.describe_segments()
                         st.session_state['recommendations'] = segmentation.generate_strategic_recommendations()
             
-            # Display results if they exist
             if 'k_range' in st.session_state:
                 st.markdown("---")
                 col1, col2 = st.columns([1, 1])
                 
                 with col1:
-                    # Plot elbow method
                     fig, ax1 = plt.subplots(figsize=(10, 6))
                     
                     color = '#4267B2'
@@ -479,7 +478,6 @@ def main():
                     st.pyplot(fig)
                 
                 with col2:
-                    # Optimal K recommendation
                     st.markdown(f"""
                     <div class="success-msg">
                         <h3>Recommended Clusters: {st.session_state['best_k']}</h3>
@@ -487,7 +485,6 @@ def main():
                     </div>
                     """, unsafe_allow_html=True)
                     
-                    # Silhouette score metrics
                     if 'silhouette' in st.session_state:
                         st.markdown(f"""
                         <div class="metric-card">
@@ -496,7 +493,6 @@ def main():
                         </div>
                         """, unsafe_allow_html=True)
             
-            # Show cluster distribution if clustering is done
             if 'df_clustered' in st.session_state:
                 st.markdown("---")
                 st.markdown("### Customer Distribution Across Clusters")
@@ -506,7 +502,6 @@ def main():
                 col1, col2 = st.columns([1, 2])
                 
                 with col1:
-                    # Display metrics about clusters
                     st.markdown("#### Cluster Statistics")
                     total_customers = len(st.session_state['df_clustered'])
                     num_clusters = len(cluster_counts)
@@ -517,7 +512,6 @@ def main():
                     with metrics_col2:
                         display_metric("Number of Clusters", num_clusters)
                     
-                    # Display cluster sizes
                     st.markdown("#### Cluster Sizes")
                     for cluster, count in cluster_counts.items():
                         percentage = (count / total_customers) * 100
@@ -532,7 +526,6 @@ def main():
                         """, unsafe_allow_html=True)
                 
                 with col2:
-                    # Distribution visualization
                     fig = px.bar(x=cluster_counts.index, y=cluster_counts.values, 
                                  labels={'x': 'Cluster', 'y': 'Number of Customers'},
                                  title="Customer Distribution",
@@ -547,21 +540,17 @@ def main():
                     )
                     
                     st.plotly_chart(fig, use_container_width=True)
-        
-        # Only show remaining tabs if clustering has been run
+    
         if 'df_clustered' in st.session_state:
-            # Tab 2: Segment Profiles
             with tabs[1]:
                 col1, col2 = st.columns([1, 1])
                 
                 with col1:
                     st.markdown("### Customer Segment Profiles")
                     
-                    # Format and display segment profiles with better styling
                     profile_df = st.session_state['segment_summary'].copy()
                     st.dataframe(profile_df, use_container_width=True, height=400)
                     
-                    # Display segment descriptions
                     st.markdown("### Segment Descriptions")
                     for cluster, desc in st.session_state['segment_descriptions'].items():
                         st.markdown(f"""
@@ -572,8 +561,7 @@ def main():
                 
                 with col2:
                     st.markdown("### Segment Comparison")
-                    
-                    # Select features for radar chart
+ 
                     selected_features = st.multiselect(
                         "Select features to compare", 
                         segmentation.summary_columns,
@@ -581,15 +569,13 @@ def main():
                     )
                     
                     if selected_features:
-                        # Normalize the data for radar chart
                         summary_normalized = st.session_state['segment_summary'][selected_features].copy()
                         for feature in selected_features:
                             max_val = summary_normalized[feature].max()
                             min_val = summary_normalized[feature].min()
                             if max_val > min_val:
                                 summary_normalized[feature] = (summary_normalized[feature] - min_val) / (max_val - min_val)
-                        
-                        # Create radar chart
+ 
                         fig = go.Figure()
                         
                         colors = px.colors.qualitative.Bold
@@ -615,8 +601,7 @@ def main():
                         )
                         
                         st.plotly_chart(fig, use_container_width=True)
-                    
-                    # Add a heatmap visualization for better comparison
+
                     if len(selected_features) > 0:
                         st.markdown("### Segment Heatmap")
                         
@@ -635,19 +620,16 @@ def main():
                         )
                         
                         st.plotly_chart(fig, use_container_width=True)
-            
-            # Tab 3: Customer Distribution
+
             with tabs[2]:
                 st.markdown("### Customer Distribution Analysis")
                 
                 col1, col2 = st.columns([1, 2])
                 
                 with col1:
-                    # Feature selection for scatter plot
                     x_feature = st.selectbox("Select X-axis feature", segmentation.summary_columns, index=0)
                     y_feature = st.selectbox("Select Y-axis feature", segmentation.summary_columns, index=2)
-                    
-                    # Key metrics distribution by cluster
+
                     st.markdown("### Key Metrics Distribution")
                     
                     selected_metric = st.selectbox(
@@ -656,7 +638,6 @@ def main():
                     )
                 
                 with col2:
-                    # Create scatter plot with improved styling
                     fig = px.scatter(
                         st.session_state['df_clustered'], 
                         x=x_feature, 
@@ -673,8 +654,7 @@ def main():
                     )
                     
                     st.plotly_chart(fig, use_container_width=True)
-                
-                # Box plot for distribution analysis
+
                 fig = px.box(
                     st.session_state['df_clustered'],
                     x='Cluster',
@@ -690,8 +670,7 @@ def main():
                 )
                 
                 st.plotly_chart(fig, use_container_width=True)
-                
-                # Add a violin plot option
+
                 show_violin = st.checkbox("Show Violin Plot")
                 if show_violin:
                     fig = px.violin(
@@ -710,12 +689,10 @@ def main():
                     )
                     
                     st.plotly_chart(fig, use_container_width=True)
-            
-            # Tab 4: Strategic Recommendations
+
             with tabs[3]:
                 st.markdown("### Strategic Marketing Recommendations")
-                
-                # Select cluster for detailed recommendations
+
                 selected_cluster = st.selectbox(
                     "Select customer segment for detailed recommendations",
                     list(st.session_state['recommendations'].keys()),
@@ -725,11 +702,9 @@ def main():
                 col1, col2 = st.columns([1, 1])
                 
                 with col1:
-                    # Display segment profile
                     st.markdown(f"### Segment {selected_cluster} Profile")
                     st.markdown(f"**{st.session_state['segment_descriptions'][selected_cluster]}**")
-                    
-                    # Create metrics display for key characteristics
+
                     segment_data = st.session_state['segment_summary'].loc[selected_cluster]
                     
                     key_metrics_col1, key_metrics_col2 = st.columns(2)
@@ -742,8 +717,7 @@ def main():
                         display_metric("Churn Risk", f"{segment_data['ChurnRisk']:.2%}")
                         display_metric("Discount Affinity", f"{segment_data['DiscountAffinity']:.2%}")
                         display_metric("Campaign Engaged", f"{segment_data['CampaignEngaged']:.2%}")
-                    
-                    # Display recommendations with styled cards
+
                     st.markdown("### Recommended Strategies")
                     for rec in st.session_state['recommendations'][selected_cluster]:
                         st.markdown(f"""
@@ -754,14 +728,11 @@ def main():
                         """, unsafe_allow_html=True)
                 
                 with col2:
-                    # Visual representation of segment characteristics
                     st.markdown("### Segment Characteristics")
-                    
-                    # Create horizontal bar chart for key metrics
+  
                     metrics_to_show = ["Income", "TotalSpend", "OnlinePurchaseRatio", 
                                     "DiscountAffinity", "CampaignEngaged", "ChurnRisk"]
-                    
-                    # Calculate relative values compared to average
+
                     segment_values = []
                     for metric in metrics_to_show:
                         segment_val = segment_data[metric]
@@ -773,11 +744,9 @@ def main():
                             'AbsValue': abs(rel_val),
                             'Direction': 'Above average' if rel_val >= 0 else 'Below average'
                         })
-                    
-                    # Create dataframe for visualization
+    
                     comparison_df = pd.DataFrame(segment_values)
-                    
-                    # Create horizontal bar chart
+
                     fig = px.bar(
                         comparison_df,
                         y='Metric',
@@ -799,8 +768,7 @@ def main():
                     )
                     
                     st.plotly_chart(fig, use_container_width=True)
-                    
-                    # Additional guidance section
+
                     st.markdown("### Implementation Guidance")
                     
                     implementation_guidance = {
@@ -810,7 +778,6 @@ def main():
                         "Low value & high churn risk": "Evaluate acquisition costs against potential lifetime value."
                     }
                     
-                    # Determine which guidance to show based on segment characteristics
                     high_value = segment_data['TotalSpend'] > st.session_state['segment_summary']['TotalSpend'].mean()
                     high_churn = segment_data['ChurnRisk'] > st.session_state['segment_summary']['ChurnRisk'].mean()
                     
@@ -823,12 +790,10 @@ def main():
                     </div>
                     """, unsafe_allow_html=True)
 
-                # Add customer lookup tool at the bottom of tab 4
                 st.markdown("---")
                 st.markdown("### Customer Lookup Tool")
                 st.markdown("Look up which segment a specific customer belongs to")
 
-                # Get customer ID for lookup if available
                 if 'ID' in st.session_state.df.columns:
                     customer_ids = st.session_state.df['ID'].tolist()
                     selected_id = st.selectbox("Select Customer ID", customer_ids)
@@ -842,18 +807,15 @@ def main():
                                 
                                 if customer_index in st.session_state['df_clustered'].index:
                                     cluster = st.session_state['df_clustered'].loc[customer_index, 'Cluster']
-                                    
-                                    # Success message with segment info
+
                                     st.markdown(f"""
                                     <div class="success-msg">
                                         <h3>Customer {selected_id} belongs to {st.session_state['segment_descriptions'][cluster]}</h3>
                                     </div>
                                     """, unsafe_allow_html=True)
-                                    
-                                    # Show customer key metrics
+   
                                     customer_metrics = st.session_state['df_clustered'].loc[customer_index, segmentation.summary_columns]
-                                    
-                                    # Calculate how customer differs from segment average
+
                                     segment_avg = st.session_state['segment_summary'].loc[cluster]
                                     
                                     comparison_data = pd.DataFrame({
@@ -864,12 +826,10 @@ def main():
                                     
                                     st.markdown("#### Customer Profile vs. Segment Average")
                                     st.dataframe(comparison_data, use_container_width=True)
-                                    
-                                    # Personalized recommendations
+ 
                                     st.markdown("#### Personalized Recommendations")
                                     st.markdown("Based on this customer's specific profile and segment:")
-                                    
-                                    # Example personalized recommendation logic
+      
                                     recs = []
                                     
                                     if customer_metrics['TotalSpend'] > segment_avg['TotalSpend']:
@@ -896,22 +856,17 @@ def main():
                 else:
                     st.info("Customer ID column not found in dataset")
 
-                # Add option to download segmented data
                 st.markdown("---")
                 st.markdown("### Export Segmented Customer Data")
 
                 if st.button("Prepare Download"):
                     with st.spinner("Preparing file for download..."):
-                        # Create Excel file in memory
                         output = BytesIO()
                         with pd.ExcelWriter(output, engine='xlsxwriter') as writer:
-                            # Export segmented customer data
                             st.session_state['df_clustered'].to_excel(writer, sheet_name='Segmented Customers', index=False)
                             
-                            # Export segment summary
                             st.session_state['segment_summary'].to_excel(writer, sheet_name='Segment Profiles')
                             
-                            # Create recommendations sheet
                             rec_rows = []
                             for cluster, recs in st.session_state['recommendations'].items():
                                 for rec in recs:
@@ -923,7 +878,6 @@ def main():
                             
                             pd.DataFrame(rec_rows).to_excel(writer, sheet_name='Recommendations', index=False)
                             
-                        # Download link
                         st.markdown("#### Download Segmented Customer Data")
                         st.download_button(
                             label="Download Excel File",
@@ -932,6 +886,4 @@ def main():
                             mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
                         )
 
-# Add this line to properly close the main function
-if __name__ == "__main__":
-    main()
+main()

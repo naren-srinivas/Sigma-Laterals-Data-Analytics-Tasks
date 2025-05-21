@@ -364,7 +364,7 @@ def main():
         col1, col2 = st.columns(2)
         
         with col1:
-            uploaded_file = st.file_uploader("📤 Upload Customer Data (CSV)", type=["csv"], 
+            uploaded_file = st.file_uploader("Upload Customer Data (CSV)", type=["csv"], 
                                            help="Upload a CSV file containing customer data")
             
             if uploaded_file is not None:
@@ -380,7 +380,7 @@ def main():
         
         with col2:
             st.write("Or use the default dataset:")
-            if st.button("📊 Load Default Dataset"):
+            if st.button("Load Default Dataset"):
                 try:
                     with st.spinner("Loading default dataset..."):
                         # Try to load from common locations
@@ -401,7 +401,7 @@ def main():
     if st.session_state.file_uploaded:
         col1, col2 = st.columns([3, 1])
         with col1:
-            st.markdown('<div class="minimized-uploader">📄 CSV file uploaded successfully</div>', unsafe_allow_html=True)
+            st.markdown('<div class="minimized-uploader">CSV file uploaded successfully</div>', unsafe_allow_html=True)
         with col2:
             if st.button("Change File"):
                 st.session_state.file_uploaded = False
@@ -415,7 +415,7 @@ def main():
         
         segmentation = CustomerSegmentation(st.session_state.df)
         
-        tabs = st.tabs(["📊 Cluster Analysis", "👥 Segment Profiles", "📈 Customer Distribution", "💼 Strategic Recommendations"])
+        tabs = st.tabs(["Cluster Analysis", "Segment Profiles", "Customer Distribution", "Strategic Recommendations"])
         
         with tabs[0]:
             col1, col2 = st.columns([1, 1])
